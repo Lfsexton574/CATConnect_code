@@ -1,0 +1,429 @@
+With prop As (
+Select donor_id
+     , listagg(proposal_active_indicator, ', ') Within Group (Order By proposal_submitted_date ASC) As Prop_Active_Ind
+--     , proposal_stage
+--     , proposal_type
+     , listagg(proposal_name, ', ') Within Group (Order By proposal_submitted_date ASC) As Prop_Name
+--     , proposal_probability
+--     , proposal_amount
+--     , proposal_submitted_amount
+--     , proposal_anticipated_amount
+--     , proposal_created_date
+     , listagg(proposal_submitted_date, ', ') Within Group (Order By proposal_submitted_date ASC) As Prop_Submitted_Date
+--     , proposal_designation_units
+     , listagg(ksm_flag, ', ') Within Group (Order By proposal_submitted_date ASC) As Prop_KSM_Flag
+--     , active_proposal_manager_name
+--     , active_proposal_manager_unit
+From mv_proposals
+Where proposal_active_indicator = 'Y'
+Group By donor_id
+)
+,
+
+GAB As (
+Select constituent_donor_id
+     , constituent_name
+     , involvement_name As GAB
+     , involvement_status As GAB_Status
+     , involvement_type
+     , involvement_role As GAB_Role
+     , involvement_comment As GAB_Comment
+From mv_involvement
+Where involvement_name Like 'KSM Global Advisory Board'
+And Involvement_Status = 'Current'
+)
+,
+
+KEBA As (
+Select constituent_donor_id
+     , constituent_name
+     , involvement_name As KEBA
+     , involvement_status As KEBA_Status
+     , involvement_type
+     , involvement_role As KEBA_Role
+     , involvement_comment As KEBA_Comment
+From mv_involvement
+Where involvement_name Like 'Kellogg Executive Board for Asia'
+And Involvement_Status = 'Current'
+)
+,
+
+BOT As (
+Select constituent_donor_id
+     , constituent_name
+     , involvement_name As BOT
+     , involvement_status As BOT_Status
+     , involvement_type
+     , involvement_role As BOT_role
+     , involvement_comment As BOT_Comment
+From mv_involvement
+Where involvement_name Like 'Board of Trustees'
+And Involvement_Status = 'Current'
+)
+,
+
+Corner As (
+Select Distinct ME.DONOR_ID
+    , ME.FULL_NAME
+    , SMC.ap_giving_society_name_text__c As KSM_Cornerstone
+    , SMC.AP_GIFT_CLUB_STATUS__C As KSM_Cornerstone_Status
+    , mem.Name As KSM_Cornerstone_Level
+    , SMC.UCINN_ASCENDV2__EXPIRATION_DATE__C As KSM_Cornerstone_Exp_Date
+From MV_ENTITY ME
+Inner Join stg_alumni.ucinn_ascendv2__society_membership__c SMC
+On ME.SALESFORCE_ID = SMC.UCINN_ASCENDV2__CONTACT__C
+Inner Join stg_alumni.ucinn_ascendv2__membership_level__c mem
+      On SMC.UCINN_ASCENDV2__MEMBERSHIP_LEVEL__C = mem.ID
+Where ap_gift_club_status__c = 'Active'
+And ap_giving_society_name_text__c = 'KSM Cornerstone Donors'
+And smc.UCINN_ASCENDV2__EXPIRATION_DATE__C >= to_char(to_date('08/31/2025', 'mm/dd/yyyy'))
+And smc.UCINN_ASCENDV2__EXPIRATION_DATE__C < to_char(to_date('08/31/2026', 'mm/dd/yyyy'))
+)
+,
+
+Professional_MA As ( -- Zach's code from 4/30/2025
+select e.donor_id
+      ,'Manual Add FY25 - Professional' as Professional_FY25_Manual_Add
+From mv_entity e
+Where e.donor_id In (
+'0000896962' --  no tag in CATs
+,'0000441055' --  no tag in CATs
+-- fy25 manual adds newly added ids to CATs
+ ,'0000514667'
+ ,'0000837036'
+, '0000931049'
+, '0000931050'
+, '0000931051'
+, '0000931054' -- same hh as 0000931057
+, '0000931057' -- same hh as 0000931054
+, '0000931061'
+, '0000931064'
+, '0000931066'
+, '0000931070'
+, '0000931072'
+, '0000931078'
+, '0000931079'
+, '0000931081'
+, '0000931082'
+, '0000931083'
+, '0000931087'
+-- other FY25 manual adds with existing ids
+, '0000439435'
+, '0000289505'
+, '0000373345'
+, '0000234323'
+, '0000246649'
+, '0000917758'
+, '0000838439'
+, '0000837036'
+, '0000768697'
+, '0000576156'
+, '0000859654'
+, '0000648261'
+, '0000853341'
+, '0000693095'
+, '0000853350'
+, '0000908967'
+, '0000255972'
+, '0000853373'
+, '0000576295'
+, '0000376714'
+, '0000833069'
+, '0000146626'
+, '0000624229'
+, '0000423897'
+, '0000831042'
+, '0000853384'
+, '0000846384'
+, '0000343920'
+, '0000514667'
+, '0000853386'
+, '0000438744'
+, '0000573302'
+, '0000550509'
+, '0000879929'
+, '0000746803'
+, '0000853390'
+, '0000592880'
+, '0000280698'
+, '0000853402'
+, '0000908965'
+, '0000183445'
+, '0000514667'
+, '0000913575'
+, '0000930442'
+, '0000689612'
+, '0000908964'
+, '0000852227'
+, '0000852228'
+, '0000852229'
+, '0000896962'
+, '0000852230'
+, '0000679775'
+, '0000546761'
+, '0000908516'
+, '0000897413'
+, '0000853374'
+, '0000246895'
+, '0000625086'
+, '0000334268'
+, '0000853351'
+, '0000842575'
+, '0000853401'
+, '0000347014'
+, '0000853408'
+, '0000908966'
+, '0000562844'
+, '0000852221'
+, '0000853348'
+, '0000614964'
+, '0000700606'
+, '0000852233'
+, '0000549724'
+, '0000853346'
+, '0000549781'
+, '0000832970'
+, '0000853352'
+, '0000197623'
+, '0000853382'
+, '0000853383'
+, '0000693125'
+, '0000718281'
+, '0000853385'
+, '0000441055'
+, '0000853399'
+, '0000885050'
+, '0000297927'
+, '0000432138'
+)
+)
+,
+
+Personalized_MA As ( -- Zach's code from 4/30/2025
+Select e.donor_id
+      ,'Manual Add FY25 - Personalized' as Personalized_FY25_Manual_Add
+From mv_entity e
+Where e.donor_id In (
+'0000425294' --  Helen H. Zell (currently tagged as vendor in CATs)
+,'0000713584' -- fy25 manual add
+,'0000609726' -- fy25 manual add
+-- manual adds from 9/30/2024
+, '0000510155'
+, '0000532526'
+, '0000532383'
+, '0000532282'
+, '0000429275'
+, '0000734449'
+, '0000532515'
+, '0000579859'
+, '0000295730'
+, '0000380594'
+, '0000516439'
+, '0000297073'
+, '0000289258'
+, '0000323698'
+, '0000299505'
+, '0000400503'
+, '0000315155'
+, '0000285123'
+, '0000432804' -- same hh as 432804
+, '0000283064' -- same hh as 432804
+, '0000339599'
+, '0000283191'
+, '0000608644'
+)
+)
+,
+
+Full_Circle As (
+Select household_id
+     , full_circle_credit
+     , full_circle_recognition
+     , Case When full_circle_recognition >= '1000000'
+       Then '$1M+' When full_circle_recognition >= '100000'
+         Then '$100,000 - $999,999' When full_circle_recognition > '1'
+         Then 'Under $100k' Else '' End as KFC_Donor_Recognition_Level
+     , Case When full_circle_recognition >= '1'
+            Then 'Full Circle Donor' End As Full_Circle_Donor
+From mv_ksm_giving_summary
+Where full_circle_recognition >= '1'
+)
+,
+
+DFCV As (
+Select id_number
+     , listagg(credited_name, ', ') Within Group (Order By contact_date ASC) As DFC_Visit_Credited_Name
+     , listagg(contact_type, ', ') Within Group (Order By contact_date ASC) As DFC_Visit_Contact_Type
+     , listagg(fiscal_year, ', ') Within Group (Order By contact_date ASC) As DFC_Visit_FY
+     , listagg(contact_date, ', ') Within Group (Order By contact_date ASC) As DFC_Visit_Contact_Date
+     , listagg(cr_description, ', ') Within Group (Order By contact_date ASC) As DFC_Visit_Desc
+From DFC_Visits_All
+Group By id_number
+)
+,
+
+DFCV_Ind As (
+Select id_number
+     , DFC_Visit_Contact_Type
+     , Case When DFCV.DFC_Visit_Contact_Type Like 'Visit%'
+            Then 'DFC_Visit' End as DFC_Visit
+From DFCV
+)
+,
+
+DFCE As (
+Select id_number
+     , listagg(credited_name, ', ') Within Group (Order By contact_date ASC) As DFC_Event_Credited_Name
+     , listagg(contact_type, ', ') Within Group (Order By contact_date ASC) As DFC_Event_Contact_Type
+     , listagg(fiscal_year, ', ') Within Group (Order By contact_date ASC) As DFC_Event_FY
+     , listagg(contact_date, ', ') Within Group (Order By contact_date ASC) As DFC_Event_Contact_Date
+     , listagg(cr_description, ', ') Within Group (Order By contact_date ASC) As DFC_Event_Desc
+From DFC_EVENTS_CY24
+Group By id_number
+)
+,
+
+DFCE_Ind As (
+Select id_number
+     , DFC_Event_Contact_Type
+     , Case When DFC_Event_Contact_Type Like 'Event%'
+            Then 'DFC_Event' End as DFC_Event
+From DFCE
+)
+,
+
+Concat_data As (
+Select constituent_donor_id As id_number, GAB As Criteria, 1 As Rank
+From GAB
+Union
+Select constituent_donor_id As id_number, BOT As Criteria, 2 As Rank
+From BOT
+Union
+Select constituent_donor_id As id_number, KEBA As Criteria, 3 As Rank
+From KEBA
+Union
+Select donor_id As id_number, KSM_Cornerstone As Criteria, 4 As Rank
+From Corner
+--Union
+--Select id_number, KFC_Donor_Recognition_Level As Criteria, 5 As Rank
+--From Full_Circle
+Union
+Select id_number, DFC_Visit As Criteria, 6 As Rank
+From DFCV_Ind
+Union
+Select id_number, DFC_Event As Criteria, 7 As Rank
+From DFCE_Ind
+Union
+Select donor_id As id_number, Professional_FY25_Manual_Add As Criteria, 1 As Rank
+From Professional_MA
+Union
+Select donor_id As id_number, Personalized_FY25_Manual_Add As Criteria, 1 As Rank
+From Personalized_MA
+)
+
+, concated As (
+Select id_number
+, listagg(criteria, ', ') within group (order by rank asc) As KDHC_Indicators
+From concat_data
+Group By id_number
+)
+
+
+Select Distinct mve.donor_id
+     , mve.full_name
+     , mve.first_name
+     , mve.last_name
+     , mve.institutional_suffix
+     , mve.is_deceased_indicator
+     , Case When cc.KDHC_Indicators is not null and giv.KFC_Donor_Recognition_Level is not null
+       Then cc.KDHC_Indicators || ', ' || giv.KFC_Donor_Recognition_Level
+         When cc.KDHC_Indicators is null and giv.KFC_Donor_Recognition_Level is not null
+           Then giv.KFC_Donor_Recognition_Level
+             Else cc.KDHC_Indicators End As KDHC_Indicators
+     , giv.full_circle_donor
+     , giv.KFC_Donor_Recognition_Level
+     , mve.spouse_donor_id
+     , mve.spouse_name
+     , mve.spouse_institutional_suffix
+     , mves.is_deceased_indicator As Spouse_Deceased_Ind
+     , kdhc.mail_list_code
+     , kdhc.mail_list
+     , kdhc.mail_list_status_code
+     , kdhc.start_dt
+     , kdhc.mail_list_ctrl_code
+     , kdhc.segment_group
+     , kdhc.kdhc_xcomment
+     , mvp.ksm_manager_flag
+     , mvp.prospect_manager_name
+     , mvp.prospect_manager_business_unit
+     , mvp.lagm_name
+     , mvp.lagm_business_unit
+     , giv.full_circle_credit
+     , giv.full_circle_recognition
+     , prop.Prop_Active_Ind
+     , prop.Prop_KSM_Flag
+     , prop.Prop_Name
+     , GAB.GAB
+     , GAB.GAB_Status
+     , GAB.GAB_Role
+--     , GAB.GAB_Comment
+     , KEBA.KEBA
+     , KEBA.KEBA_Status
+     , KEBA.KEBA_Role
+--     , KEBA.KEBA_Comment
+     , BOT.BOT
+     , BOT.BOT_Status
+     , BOT.BOT_role
+--     , BOT.BOT_Comment
+     , ksmc.KSM_Cornerstone
+     , ksmc.KSM_Cornerstone_Status
+--     , ksmc.KSM_Cornerstone_Level
+--     , ksmc.KSM_Cornerstone_Exp_Date
+     , PRMA.Professional_FY25_Manual_Add
+     , PEMA.Personalized_FY25_Manual_Add
+     , DFCV.DFC_Visit_Credited_Name
+     , DFCV.DFC_Visit_Contact_Type
+     , DFCV.DFC_Visit_FY
+     , DFCV.DFC_Visit_Contact_Date
+     , DFCV.DFC_Visit_Desc
+     , DFCVI.DFC_Visit
+     , DFCE.DFC_Event_Credited_Name
+     , DFCE.DFC_Event_Contact_Type
+     , DFCE.DFC_Event_FY
+     , DFCE.DFC_Event_Contact_Date
+     , DFCE.DFC_Event_Desc
+     , DFCEI.DFC_Event
+From KDHC_FY25 kdhc
+Inner Join mv_entity mve
+     On mve.donor_id = kdhc.id_number
+Left Join mv_entity mves
+     On mves.donor_id = mve.spouse_donor_id
+Left Join Full_Circle giv
+     On giv.household_id = mve.household_id
+Left Join prop
+     On kdhc.id_number = prop.donor_id
+Left Join mv_assignments mvp
+     On kdhc.id_number = mvp.donor_id
+Left Join GAB
+     On GAB.constituent_donor_id = kdhc.id_number
+Left Join KEBA
+     On KEBA.constituent_donor_id = kdhc.id_number
+Left Join BOT
+     On BOT.constituent_donor_id = kdhc.id_number
+Left Join Corner KSMC
+     On KSMC.Donor_id = kdhc.id_number
+Left Join Professional_MA PRMA
+     On PRMA.donor_id = kdhc.id_number
+Left Join Personalized_MA PEMA
+     On PEMA.donor_id = kdhc.id_number
+Left Join DFCE
+     On DFCE.id_number = kdhc.id_number
+Left Join DFCV
+     On DFCV.id_number = kdhc.id_number
+Left Join DFCV_Ind DFCVI
+     On DFCVI.id_number = kdhc.id_number
+Left Join DFCE_Ind DFCEI
+     On DFCEI.id_number = kdhc.id_number
+Left Join concated cc
+     On cc.id_number = kdhc.id_number
+Where kdhc.segment_group In ('Personalized ', 'Professional ')
