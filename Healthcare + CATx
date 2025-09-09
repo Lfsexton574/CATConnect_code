@@ -1,0 +1,163 @@
+With KHCAC As (
+Select constituent_donor_id
+     , constituent_name
+     , involvement_name As HCAC
+     , involvement_status As HCAC_Status
+     , involvement_type
+     , involvement_role As HCAC_Role
+     , involvement_comment As HCAC_Comment
+From mv_involvement
+Where involvement_name Like 'KSM Healthcare at Kellogg Advisory Council'
+And Involvement_Status = 'Current'
+)
+,
+
+HC_prim_emp As (
+Select distinct
+       c.UCINN_ASCENDV2__RELATED_CONTACT_DONOR_ID_FORMULA__C As Donor_ID
+     , max (c.ap_is_primary_employment__c) keep (dense_rank First Order by c.ucinn_ascendv2__start_date__c desc) as HC_primary_employ_ind
+     , max (c.ucinn_ascendv2__status__c) keep (dense_rank First Order by c.ucinn_ascendv2__start_date__c desc) as HC_primary_employ_status
+     , max (c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C) keep (dense_rank first order by c.ucinn_ascendv2__start_date__c desc) as HC_primary_employer
+     , max (c.ucinn_ascendv2__job_title__c) keep (dense_rank first order by c.ucinn_ascendv2__start_date__c desc) as HC_primary_job_title
+From stg_alumni.ucinn_ascendv2__Affiliation__c c
+Where c.ap_is_primary_employment__c = 'true'
+And c.ucinn_ascendv2__status__c = 'Current'
+And (c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Hospital%'
+OR c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Pharmaceuticals%'
+OR c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Health Care%'
+OR c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Biotech%'
+OR c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Medical Devices%'
+OR c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Medical Practice%'
+OR c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%HealthCare%'
+OR c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Health%'
+OR c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Pharma%'
+OR c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Medical%')
+Group by c.UCINN_ASCENDV2__RELATED_CONTACT_DONOR_ID_FORMULA__C
+)
+,
+
+HCEntInd As (
+Select dm.constituent_donor_id
+     , dm.industries
+     , dm.industry_subsectors
+From DM_ALUMNI.Dim_Constituent dm
+Where (dm.industries Like 'Health Care and Social Assistance'
+OR dm.industry_subsectors In ('Administration of Public Health Programs', 'Hospitals', 'Medical and Diagnostic Laboratories',
+'Offices of All Other Miscellaneous Health Practitioners', 'Offices of Mental Health Practitioners (except Physicians)', 'Pharmacies and Drug Stores',
+'Medical Equipment and Supplies Manufacturing', 'Pharmaceutical and Medicine Manufacturing'))
+)
+,
+
+HCAK_AM As (
+Select donor_id
+     , membership_level AS HCAK_AM_Membership
+From HCAK_9_25
+)
+,
+
+HCAK_CATX As (
+Select id_number
+     , LAST_CATX_PULL
+From HCAK_LAST_CATX_PULL
+)
+,
+
+--HC_BOS As (
+--Select donor_id
+--     , CASE WHEN donor_id Not Like ' ' Then 'HC_Boston_List' End As HC_Boston
+--From mv_entity
+--Where donor_id In ('0000324826', '0000285376', '0000608791', '0000286169', '0000483858', '0000393006', '0000574590', '0000787947', '0000551956', '0000580081', '0000532170', '0000429051', '0000653263', '0000861876', '0000439411', '0000433010', '0000500837', '0000808947', '0000501010', '0000405424', '0000544461', '0000579798', '0000916289', '0000285219', '0000442007', '0000609559', '0000668710', '0000813823', '0000596155', '0000483793', '0000572069', '0000542239', '0000296234', '0000442172', '0000146374', '0000308433', '0000708732', '0000819344', '0000609559', '0000376229', '0000516013', '0000304360', '0000766880', '0000799440', '0000799845', '0000283289', '0000667047', '0000440343', '0000299352', '0000430621', '0000472155', '0000441278', '0000441704', '0000516294', '0000804480', '0000500901', '0000515905', '0000284244', '0000365654', '0000784963', '0000756255', '0000284870', '0000299044', '0000579751', '0000595755', '0000495370', '0000794868', '0000302551', '0000286297', '0000502084', '0000629199', '0000285179', '0000046494', '0000442301', '0000609945', '0000410497', '0000283952', '0000284804', '0000495370', '0000564240', '0000284413', '0000285931', '0000285982', '0000386045', '0000357306', '0000643387', '0000665183', '0000283916', '0000441772', '0000564444', '0000284159', '0000627437', '0000483980', '0000484618', '0000666953', '0000578448', '0000469422', '0000501350', '0000646805', '0000420452', '0000734563', '0000846635', '0000441272', '0000574397', '0000827595', '0000651290', '0000708824', '0000295142', '0000709527', '0000432776', '0000400118', '0000624969', '0000780711', '0000667379', '0000285358', '0000422767', '0000343859', '0000608734', '0000762595', '0000469214', '0000283447', '0000285134', '0000599945', '0000430451', '0000547730', '0000285177', '0000284247', '0000564092', '0000284675', '0000316234', '0000285841', '0000284840', '0000285550', '0000564561', '0000441176', '0000580072', '0000548084', '0000285259', '0000290101', '0000548434', '0000432729', '0000390457', '0000513958', '0000856780', '0000846271', '0000774044', '0000799720', '0000629180', '0000667608', '0000484182', '0000321397', '0000411557', '0000795095', '0000291948', '0000732846', '0000392981', '0000634145', '0000789590', '0000516685', '0000393877', '0000646773', '0000286423', '0000595666', '0000595384', '0000468875', '0000647731', '0000294049', '0000594618', '0000287074', '0000297167', '0000284752', '0000528609', '0000147364', '0000564665', '0000897460', '0000500964', '0000838968', '0000532579', '0000465022', '0000468817', '0000441499', '0000745663', '0000369853', '0000468623', '0000284341', '0000628679', '0000285347', '0000347213', '0000627331', '0000483804', '0000393707', '0000296960', '0000285824', '0000256174', '0000846553', '0000285336', '0000284773', '0000422334', '0000643118', '0000469338', '0000873081', '0000390645', '0000544429', '0000665961', '0000647052', '0000285716', '0000290861', '0000629273', '0000777745', '0000297826', '0000574500', '0000847323', '0000146336', '0000687260', '0000548340', '0000285534', '0000287094', '0000307138', '0000608903', '0000286344', '0000304647', '0000403520', '0000285474', '0000815029', '0000126252', '0000286205', '0000344776', '0000733888', '0000422266', '0000283207', '0000318943', '0000732875', '0000027914', '0000284609', '0000687236', '0000721112', '0000666028', '0000609266', '0000205416', '0000288732', '0000293482', '0000285633', '0000461832', '0000286697', '0000286173', '0000522481', '0000467267', '0000415151', '0000330018', '0000564187', '0000285208', '0000532639', '0000394867', '0000501177', '0000687213', '0000516586', '0000564503', '0000316320', '0000798708', '0000564027', '0000380167', '0000300568', '0000441126', '0000517337', '0000441282', '0000564176', '0000595947', '0000432788', '0000285436', '0000579941', '0000287612', '0000804187', '0000285559', '0000483827', '0000296269', '0000284619', '0000532230', '0000859500', '0000664626', '0000588354', '0000284307', '0000628629', '0000830841', '0000614797', '0000783822', '0000516315', '0000469159', '0000288456', '0000820607', '0000284448', '0000418946', '0000291059', '0000290818', '0000305402', '0000547736', '0000645972', '0000500911', '0000438320', '0000289045', '0000783455', '0000432875', '0000301637', '0000548757', '0000284674', '0000283854', '0000283388', '0000281138', '0000284314', '0000358223', '0000419567', '0000286029', '0000286308', '0000548578', '0000284819', '0000399371', '0000580142', '0000358413', '0000834517', '0000441737', '0000668720', '0000579508', '0000563838', '0000547116', '0000722545', '0000777807', '0000418937', '0000336710', '0000293065', '0000418931', '0000629104', '0000285575', '0000419530', '0000419280', '0000562906', '0000294498', '0000283819', '0000511102', '0000482952', '0000432973', '0000667054', '0000650051', '0000316350', '0000336669', '0000666731', '0000628468', '0000469162', '0000347402', '0000834400', '0000563669', '0000579016', '0000752630', '0000607589', '0000286273', '0000429589', '0000844152', '0000521160', '0000289092', '0000285683', '0000293094', '0000429125', '0000283492', '0000799613', '0000500502', '0000595693', '0000347017', '0000316204', '0000286630', '0000646176', '0000564039', '0000495769', '0000530245', '0000640547', '0000328717', '0000667192', '0000595922', '0000757571', '0000298828', '0000855019', '0000855019', '0000284414', '0000354479', '0000296401', '0000428522', '0000532446', '0000284158', '0000515595', '0000419624', '0000501564', '0000284748', '0000300293', '0000284960', '0000419001', '0000407527', '0000666132', '0000436084', '0000344420', '0000532288', '0000516682', '0000285006', '0000783876', '0000387817', '0000627643', '0000468549', '0000316243', '0000484696', '0000666234', '0000293755', '0000314543', '0000467039', '0000285338', '0000283304', '0000283378')
+--)
+--,
+
+Merge_IDs As (
+Select constituent_donor_id
+From KHCAC
+Union
+Select donor_id
+From HC_prim_emp
+Union
+Select constituent_donor_id
+From HCEntInd
+Union
+Select donor_id
+From HCAK_AM
+Union
+Select id_number
+From HCAK_CATX
+)
+,
+
+prim_emp As (
+Select distinct
+       c.UCINN_ASCENDV2__RELATED_CONTACT_DONOR_ID_FORMULA__C As Donor_ID
+     , max (c.ap_is_primary_employment__c) keep (dense_rank First Order by c.ucinn_ascendv2__start_date__c desc) as primary_employ_ind
+     , max (c.ucinn_ascendv2__status__c) keep (dense_rank First Order by c.ucinn_ascendv2__start_date__c desc) as primary_employ_status
+     , max (c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C) keep (dense_rank first order by c.ucinn_ascendv2__start_date__c desc) as primary_employer
+     , max (c.ucinn_ascendv2__job_title__c) keep (dense_rank first order by c.ucinn_ascendv2__start_date__c desc) as primary_job_title
+From stg_alumni.ucinn_ascendv2__Affiliation__c c
+Where c.ap_is_primary_employment__c = 'true'
+And c.ucinn_ascendv2__status__c = 'Current'
+Group by c.UCINN_ASCENDV2__RELATED_CONTACT_DONOR_ID_FORMULA__C
+)
+,
+
+email As (
+Select donor_id
+     , email_preferred_type
+     , email_preferred
+From mv_entity_contact_info
+Where email_preferred Not Like ' '
+)
+
+Select Distinct mid.constituent_donor_id
+     , ksmd.full_name
+     , ksmd.degrees_concat
+     , ksmd.program
+     , ksmd.first_ksm_year
+     , ksmec.email_preferred
+     , HCAK_CATX.Last_CATx_Pull
+     , HCID.industries
+     , HCID.industry_subsectors
+     , pe.primary_employ_ind
+     , pe.primary_employ_status
+     , pe.primary_employer
+     , pe.primary_job_title
+     , HCAK_AM.HCAK_AM_Membership
+     , hcpe.hc_primary_employ_ind
+     , hcpe.hc_primary_employ_status
+     , hcpe.hc_primary_employer
+     , hcpe.hc_primary_job_title
+     , KHCAC.HCAC
+     , KHCAC.HCAC_Status
+     , KHCAC.involvement_type
+     , KHCAC.HCAC_Role
+     , KHCAC.HCAC_Comment
+     , shc.gab
+     , shc.trustee
+     , shc.ebfa
+     , shc.no_email_ind
+     , shc.no_contact
+--     , shc.service_indicators_concat
+From merge_ids mid
+Inner Join mv_entity_ksm_degrees ksmd
+      On ksmd.donor_id = mid.constituent_donor_id
+Inner Join email ksmec
+      On ksmec.donor_id = mid.constituent_donor_id
+Left Join KHCAC
+      On khcac.constituent_donor_id = mid.constituent_donor_id
+Left Join HC_prim_emp hcpe
+      On hcpe.donor_id = mid.constituent_donor_id
+Left Join prim_emp pe
+      On pe.donor_id = mid.constituent_donor_id
+Left Join HCEntInd HCID
+      On HCID.constituent_donor_id = mid.constituent_donor_id
+Left Join HCAK_AM
+      On HCAK_AM.donor_id = mid.constituent_donor_id
+Left Join mv_special_handling shc
+      On shc.donor_id = mid.constituent_donor_id
+Left Join HCAK_CATX
+      On HCAK_CATX.id_number = mid.constituent_donor_id
+Where not ksmd.program like 'EXECED'
+And not ksmd.program like 'CERT'
+And not ksmd.program like 'NONGRAD'
