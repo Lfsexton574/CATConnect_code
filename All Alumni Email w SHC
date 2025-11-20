@@ -1,0 +1,22 @@
+Select deg.donor_id
+     , mve.full_name
+     , mve.first_name
+     , mve.last_name
+     , mvc.email_preferred_type
+     , mvc.email_preferred
+     , deg.degrees_concat
+     , deg.program
+     , deg.first_ksm_year
+     , shc.service_indicators_concat
+     , shc.no_email_ind
+     , shc.no_contact
+From mv_entity_ksm_degrees deg
+Left Join mv_entity_contact_info mvc
+      On mvc.donor_id = deg.donor_id
+Left Join mv_special_handling shc
+     On shc.donor_id = deg.donor_id
+Left Join mv_entity mve
+     On mve.donor_id = deg.donor_id
+Where deg.program not like '%UNK%'
+And deg.program not like '%NONGRAD%'
+And mvc.email_preferred not like ' '
