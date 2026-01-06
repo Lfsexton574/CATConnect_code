@@ -1,0 +1,173 @@
+With 
+BOT As (
+Select mvi.constituent_donor_id
+     , mvi.constituent_name
+     , mvi.involvement_name As BOT
+     , mvi.involvement_status As BOT_Status
+     , mvi.involvement_type As BOT_Inv_Type
+     , mvi.involvement_role As BOT_Role
+     , mvi.involvement_start_date As BOT_Start_Date
+     , mvi.involvement_comment As BOT_Comment
+From mv_involvement mvi
+Where mvi.involvement_name = 'Board of Trustees'
+And mvi.involvement_status = 'Current'
+)
+,
+
+merge_alum As (
+Select * From mv_entity_ksm_degrees
+)
+,
+
+merge_ids As (
+Select constituent_donor_id
+From BOT
+Union
+Select donor_id
+From mv_entity_ksm_degrees
+)
+,
+
+relat As (
+Select rel.primary_donor_id
+     , rel.primary_full_name
+     , rel.relationship_status
+     , rel.primary_role
+     , rel.primary_role_type
+     , rel.relationship_donor_id
+     , rel.relationship_full_name
+     , rel.relationship_role
+From mv_entity_relationships rel
+Inner Join merge_ids mi
+      On mi.constituent_donor_id = rel.relationship_donor_id
+Where rel.relationship_role In ('Aunt/Uncle', 'Great Aunt/Uncle', 
+'Sibling', 'Sibling-in-Law',
+'Parent', 'Parent-in-Law',
+'Grandparent', 'Great Grandparent'))
+,
+
+Sal As (
+SELECT
+  mv_entity.donor_id,
+  MAX(stg_alumni.ucinn_ascendv2__salutation__c.ucinn_ascendv2__inside_salutation__c)
+    KEEP (
+      DENSE_RANK FIRST ORDER BY
+        CASE stg_alumni.ucinn_ascendv2__salutation__c.ucinn_ascendv2__author_title__c
+          WHEN 'Dean of Kellogg School of Management' THEN 1
+          WHEN 'President' THEN 2
+          WHEN 'President Emeritus' THEN 3
+          WHEN 'Chairman of the Board of Trustees' THEN 4
+          WHEN 'Dean of Bienen School of Music' THEN 5
+          WHEN 'Dean of McCormick School of Engineering and Applied Science' THEN 6
+          WHEN 'Dean of Pritzker Law' THEN 7
+          WHEN 'Dean, Architecture' THEN 8
+          WHEN 'Dean, Price' THEN 9
+          WHEN 'Director of Athletic Development' THEN 10
+          WHEN 'Director of NULC' THEN 11
+          WHEN 'Vice President of Development' THEN 12
+          WHEN 'VP of Development Giving Statement' THEN 13
+          WHEN 'VP of Development Receipts' THEN 14
+          WHEN 'VP of Development, Giving Statement' THEN 15
+          ELSE 999  -- NULLs or unranked titles come last
+        END,
+        stg_alumni.ucinn_ascendv2__salutation__c.createddate DESC
+    ) AS Latest_Sal
+FROM stg_alumni.ucinn_ascendv2__salutation__c
+LEFT JOIN mv_entity
+  ON mv_entity.salesforce_id = stg_alumni.ucinn_ascendv2__salutation__c.ucinn_ascendv2__contact__c
+WHERE stg_alumni.ucinn_ascendv2__salutation__c.ucinn_ascendv2__salutation_record_type_formula__c = 'Ind'
+  AND stg_alumni.ucinn_ascendv2__salutation__c.ucinn_ascendv2__salutation_type__c = 'Informal'
+GROUP BY mv_entity.donor_id
+)
+
+
+Select deg.donor_id
+     , ec.sort_name
+     , sal.Latest_Sal
+     , deg.degrees_concat
+     , deg.program
+     , deg.first_ksm_year
+     , deg.majors_concat
+     --expected degree_year
+--     , c.id
+--     , c.name
+--     , c.UCINN_ASCENDV2__CONTACT__C
+--     , c.ucinn_ascendv2__degree_code__c
+--     , c.ucinn_ascendv2__degree_institution__c
+--     , c.ucinn_ascendv2__degree_name_auto_number__c
+--     , c.ap_academic_group__c
+     , c.ap_degree_type_from_degreecode__c
+--     , c.ap_department__c
+--     , c.ap_school__c
+     , c.ap_start_date__c
+     , c.ap_status__c
+     , c.ap_school_name_formula__c
+     , c.ap_campus__c
+--     , con.accountid
+--     , con.ucinn_ascendv2__donor_id__c
+--     , con.ap_institutional_suffix__c
+--     , con.ap_name_formula__c
+--     , con.ap_search_formula__c
+--     , con.firstname
+--     , con.id
+--     , con.name
+     , con.ucinn_ascendv2__contact_type__c
+     , ec.address_preferred_type
+     , ec.preferred_address_line_1
+     , ec.preferred_address_line_2
+     , ec.preferred_address_city
+     , ec.preferred_address_state
+     , ec.preferred_address_postal_code
+     , ec.preferred_address_country
+     , relat.relationship_status
+     , relat.primary_role
+     , relat.primary_role_type
+     , relat.relationship_donor_id
+     , relat.relationship_full_name
+     , rsal.Latest_Sal As Rel_Latest_Sal
+     , relat.relationship_role
+     , reldeg.degrees_concat As Relationship_Degrees
+     , reldeg.program As Relationship_Program
+     , reldeg.first_ksm_year As Relationship_First_KSM_Yr
+     , BOT.BOT
+     , BOT.BOT_Status
+     , BOT.BOT_Inv_Type
+     , BOT.BOT_Role
+     , BOT.BOT_Start_Date
+     , BOT.BOT_Comment
+     , rec.address_preferred_type
+     , rec.preferred_address_line_1
+     , rec.preferred_address_line_2
+     , rec.preferred_address_city
+     , rec.preferred_address_state
+     , rec.preferred_address_postal_code
+     , rec.preferred_address_country
+From stg_alumni.ucinn_ascendv2__degree_information__c c
+Inner Join stg_alumni.contact con
+      On c.ucinn_ascendv2__contact__c = con.id
+Inner Join mv_entity_ksm_degrees deg
+      On con.ucinn_ascendv2__donor_id__c = deg.donor_id
+Inner Join relat
+      On relat.primary_donor_id = deg.donor_id
+Left Join mv_entity_contact_info ec
+      On ec.donor_id = deg.donor_id
+Left Join BOT
+      On BOT.constituent_donor_id = relat.relationship_donor_id
+Left Join mv_entity_ksm_degrees reldeg
+      On reldeg.donor_id = relat.relationship_donor_id
+Left Join mv_entity_contact_info rec
+      On rec.donor_id = relat.relationship_donor_id
+Left Join Sal
+      On sal.donor_id = deg.donor_id
+Left Join Sal rsal
+      On rsal.donor_id = relat.relationship_donor_id
+Where deg.program = 'STUDENT'
+And c.ap_start_date__c >= to_date ('08/01/2025', 'mm/dd/yyyy')
+And c.ap_start_date__c <= to_date ('10/01/2025', 'mm/dd/yyyy')
+And c.ap_status__c In ('Active', 'Deposited')
+-- UCINN_ASCENDV2__DEGREE_CODE__C = 'a0UUz00000Lowj7MAB'
+-- ap_school__c = 'a00Uz00000FlhIQIAZ' -- Kellogg
+-- ap_status__c = 'Active'
+-- AP_SCHOOL_NAME_FORMULA__C = 'Kellogg'
+-- c.ucinn_ascendv2__degree_institution__c = '001Uz00000Jp3SrIAJ'
+-- c.ap_degree_type_from_degreecode__c = 'Masters Degree'
