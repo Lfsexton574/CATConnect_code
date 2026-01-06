@@ -1,0 +1,46 @@
+With a as (select
+co.ucinn_ascendv2__donor_id__c,
+co.firstname,
+co.lastname,
+c.ap_contact_report_author_name_formula__c,
+c.ucinn_ascendv2__contact_method__c,
+c.ucinn_ascendv2__date__c,
+c.ucinn_ascendv2__description__c,
+c.ucinn_ascendv2__contact_report_body__c
+from stg_alumni.ucinn_ascendv2__contact_report__c c
+left join stg_alumni.contact co on co.id = c.ucinn_ascendv2__contact__c
+where c.ap_contact_report_author_name_formula__c = 'Francesca Cornelli'
+and c.ucinn_ascendv2__contact_method__c = 'Visit'
+--and c.ucinn_ascendv2__date__c >= to_date ('09/01/2024', 'mm/dd/yyyy'))
+--or c.ucinn_ascendv2__contact_report_name_auto_number__c IN ('CR-1100531','CR-1687627','CR-1044927')
+order by c.ucinn_ascendv2__date__c ASC),
+
+--- Listagg this
+
+DFCCR as (select a.ucinn_ascendv2__donor_id__c,
+Listagg (a.ap_contact_report_author_name_formula__c, ';  ') Within Group (Order By a.ucinn_ascendv2__date__c) As Visit_CR_author,
+Listagg (a.ucinn_ascendv2__contact_method__c, ';  ') Within Group (Order By a.ucinn_ascendv2__date__c) As Visit_CR__type,
+Listagg (a.ucinn_ascendv2__date__c, ';  ') Within Group (Order By a.ucinn_ascendv2__date__c) As Visit_CR__date,
+Listagg (a.ucinn_ascendv2__description__c, ';  ') Within Group (Order By a.ucinn_ascendv2__date__c) As Visit_CR__desc
+from a
+group by a.ucinn_ascendv2__donor_id__c)
+
+Select mve.donor_id
+     , mve.full_name
+     , deg.degrees_concat
+     , deg.program
+     , deg.first_ksm_year
+     , giv.ngc_lifetime
+     , giv.ngc_lifetime_full_rec
+     , DFCCR.Visit_CR_author
+     , DFCCR.Visit_CR__type
+     , DFCCR.Visit_CR__date
+     , DFCCR.Visit_CR__desc
+From mv_entity mve
+Left Join DFCCR
+     On DFCCR.ucinn_ascendv2__donor_id__c = mve.donor_id
+Left Join mv_entity_ksm_degrees deg
+     On deg.donor_id = mve.donor_id
+Left Join mv_ksm_giving_summary giv
+     On giv.household_id = mve.household_id
+Where mve.donor_id In ('0000281878', '0000058680', '0000501130', '0000946756', '0000948815', '0000294091', '0000411885')
