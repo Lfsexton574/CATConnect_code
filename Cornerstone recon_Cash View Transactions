@@ -1,0 +1,161 @@
+With Corner_CC_FY26 As (
+Select Distinct ME.DONOR_ID
+--  , ME.SALESFORCE_ID
+    , ME.FULL_NAME
+    , SMC.AP_GIFT_CLUB_STATUS__C As CC_FY_26_GC_Status
+--    , SMC.UCINN_ASCENDV2__MEMBERSHIP_LEVEL__C
+    , mem.Name As CC_FY_26_GC_Level
+    , SMC.ap_giving_society_name_text__c As CC_FY_26_GC_Name
+    , SMC.UCINN_ASCENDV2__ANNIVERSARY_DATE__C As CC_FY_26_GC_Ann_Date
+    , SMC.UCINN_ASCENDV2__EXPIRATION_DATE__C As CC_FY_26_GC_Exp_Date
+--    , SMC.UCINN_ASCENDV2__MEMBER_SINCE__C
+--    , SMC.ucinn_ascendv2__comments__c
+--    , smc.lastmodifieddate
+--    , smc.lastmodifiedbyid
+From MV_ENTITY ME
+Inner Join stg_alumni.ucinn_ascendv2__society_membership__c SMC
+On ME.SALESFORCE_ID = SMC.UCINN_ASCENDV2__CONTACT__C
+Inner Join stg_alumni.ucinn_ascendv2__membership_level__c mem
+      On SMC.UCINN_ASCENDV2__MEMBERSHIP_LEVEL__C = mem.ID
+Where ap_gift_club_status__c = 'Active'
+  And ap_giving_society_name_text__c = 'KSM Cornerstone Donors'
+--  And mem.Name = 'Member'
+  And smc.UCINN_ASCENDV2__ANNIVERSARY_DATE__C > to_char(to_date('08/31/2025', 'mm/dd/yyyy'))
+) -- Should I use Anniversary Date?
+,
+
+Corner_CC_FY25 As (
+Select Distinct ME.DONOR_ID
+--  , ME.SALESFORCE_ID
+    , Listagg (ME.FULL_NAME, ';  ') Within Group (Order By SMC.UCINN_ASCENDV2__ANNIVERSARY_DATE__C) As CC_Full_Name
+    , Listagg (SMC.AP_GIFT_CLUB_STATUS__C, ';  ') Within Group (Order By SMC.UCINN_ASCENDV2__ANNIVERSARY_DATE__C) As CC_FY_25_GC_Status
+--    , SMC.UCINN_ASCENDV2__MEMBERSHIP_LEVEL__C
+    , Listagg (mem.Name, ';  ') Within Group (Order By SMC.UCINN_ASCENDV2__ANNIVERSARY_DATE__C) As CC_FY_25_GC_Level
+    , Listagg (SMC.ap_giving_society_name_text__c, ';  ') Within Group (Order By SMC.UCINN_ASCENDV2__ANNIVERSARY_DATE__C) As CC_FY_25_GC_Name
+    , Listagg (SMC.UCINN_ASCENDV2__ANNIVERSARY_DATE__C, ';  ') Within Group (Order By SMC.UCINN_ASCENDV2__ANNIVERSARY_DATE__C) As CC_FY_25_GC_Ann_Date
+    , Listagg (SMC.UCINN_ASCENDV2__EXPIRATION_DATE__C, ';  ') Within Group (Order By SMC.UCINN_ASCENDV2__ANNIVERSARY_DATE__C) As CC_FY_25_GC_Exp_Date
+--    , SMC.UCINN_ASCENDV2__MEMBER_SINCE__C
+--    , SMC.ucinn_ascendv2__comments__c
+--    , smc.lastmodifieddate
+--    , smc.lastmodifiedbyid
+From MV_ENTITY ME
+Inner Join stg_alumni.ucinn_ascendv2__society_membership__c SMC
+On ME.SALESFORCE_ID = SMC.UCINN_ASCENDV2__CONTACT__C
+Inner Join stg_alumni.ucinn_ascendv2__membership_level__c mem
+      On SMC.UCINN_ASCENDV2__MEMBERSHIP_LEVEL__C = mem.ID
+Where ap_giving_society_name_text__c = 'KSM Cornerstone Donors'
+--  And ap_gift_club_status__c = 'Past'
+--  And mem.Name = 'Member'
+  And smc.UCINN_ASCENDV2__ANNIVERSARY_DATE__C <= to_char(to_date('08/31/2025', 'mm/dd/yyyy'))
+  And smc.UCINN_ASCENDV2__ANNIVERSARY_DATE__C >= to_char(to_date('09/01/2024', 'mm/dd/yyyy'))
+Group By ME.DONOR_ID
+) -- Should I use Anniversary Date? No one pulling in and not sure why
+,
+
+Corner_Calc As (
+Select ent.donor_id
+     , summ.household_id
+     , ent.person_or_org
+     , summ.household_account_name
+     , summ.ngc_lifetime
+     , summ.expendable_cfy As Expendable_FY26
+     , Case When summ.expendable_cfy >= '100000' Then 'Donor_FY26'
+            End As Calc_Corner_Donor_FY26
+     , Case When summ.expendable_pfy1 >= '100000' Then 'Member_FY26'
+            End As Calc_Corner_Member_FY26
+     , summ.expendable_pfy1 As Expendable_FY25
+     , Case When summ.expendable_pfy1 >= '100000' Then 'Donor_FY25'
+            End As Calc_Corner_Donor_FY25
+     , Case When summ.expendable_pfy2 >= '100000' Then 'Member_FY25'
+            End As Calc_Corner_Member_FY25
+     , summ.expendable_pfy2 As Expendable_FY24
+     , Case When summ.expendable_pfy2 >= '100000' Then 'Donor_FY24'
+            End As Calc_Corner_Donor_FY24
+From mv_ksm_giving_summary summ
+Inner Join mv_entity ent
+      On ent.household_id = summ.household_id
+Where (summ.expendable_cfy >= '100000'
+Or summ.expendable_pfy1 >= '100000')
+--Or summ.expendable_pfy2 >= '100000')
+And ent.person_or_org = 'P'
+)
+,
+
+merge_ids As (
+Select donor_id
+From Corner_CC_FY26
+Union
+Select donor_id
+From Corner_CC_FY25
+Union
+Select donor_id
+From Corner_Calc
+)
+
+Select Distinct cas.donor_id
+     , cas.full_name
+     , cas.household_id
+     , cas.household_primary
+     , cas.person_or_org
+     , ass.prospect_manager_name
+     , ass.lagm_name
+     , cc26.CC_FY_26_GC_Status
+     , cc26.CC_FY_26_GC_Level
+     , cc26.CC_FY_26_GC_Name
+     , cc26.CC_FY_26_GC_Ann_Date
+     , cc26.CC_FY_26_GC_Exp_Date
+     , cc25.CC_FY_25_GC_Status
+     , cc25.CC_FY_25_GC_Level
+     , cc25.CC_FY_25_GC_Name
+     , cc25.CC_FY_25_GC_Ann_Date
+     , cc25.CC_FY_25_GC_Exp_Date
+     , cc.Expendable_FY26
+     , cc.Calc_Corner_Donor_FY26
+     , cc.Calc_Corner_Member_FY26
+     , cc.Expendable_FY25
+     , cc.Calc_Corner_Donor_FY25
+     , cc.Calc_Corner_Member_FY25
+     , cc.Expendable_FY24
+     , cc.Calc_Corner_Donor_FY24
+     , cas.credit_date
+     , cas.fiscal_year
+     , cas.credit_type
+     , cas.credit_amount
+     , cas.hard_credit_amount
+     , cas.recognition_credit
+     , cas.HH_credit
+     , cas.hh_recognition_credit
+     , cas.cash_countable_amount
+     , cas.hh_countable_credit     
+     , cas.opportunity_stage
+     , cas.opportunity_record_type
+     , cas.opportunity_type
+     , cas.source_type
+     , cas.source_type_detail
+     , cas.designation_status
+     , cas.legacy_allocation_code
+     , cas.designation_name
+     , mvd.designation_record_id
+     , mvd.designation_salesforce_id
+     , mvd.cash_category
+     , mvd.designation_status
+     , mvd.designation_school
+     , cas.cash_category
+     , cas.full_circle_campaign_priority
+     , cas.ksm_af_flag
+     , cas.ksm_cru_flag
+From merge_ids mid
+Inner Join v_ksm_gifts_cash cas
+      On cas.donor_id = mid.donor_id
+Inner Join mv_ksm_designation mvd
+      On cas.legacy_allocation_code = mvd.legacy_allocation_code
+Left Join Corner_CC_FY26 cc26
+      On cc26.donor_id = mid.donor_id
+Left Join Corner_CC_FY25 cc25
+      On cc25.donor_id = mid.donor_id
+Left Join Corner_Calc cc
+      On cc.donor_id = mid.donor_id
+Left Join mv_assignments ass
+      On ass.donor_id = mid.donor_id
+Where cas.credit_date >= to_char(to_date('09/01/2024', 'mm/dd/yyyy'))
+And cas.cash_category = 'Expendable'
