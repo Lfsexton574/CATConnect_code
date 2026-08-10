@@ -1,0 +1,169 @@
+With Vet As (
+Select mvi.constituent_donor_id
+--     , mvi.constituent_name
+     , mvi.involvement_code As Vet_Inv_Code
+     , mvi.involvement_name As Vet_Inv_Name
+     , mvi.involvement_status As Vet_Inv_Status
+     , mvi.involvement_type As Vet_Inv_Type
+     , mvi.involvement_role As Vet_Inv_Role
+     , mvi.involvement_start_date As Vet_Inv_Start_Dt
+     , mvi.involvement_comment As Vet_Inv_Comment
+From mv_involvement mvi
+Where mvi.involvement_name = 'Kellogg Veterans Council'
+And mvi.involvement_status = 'Current'
+)
+,
+
+PEAC As (
+Select mvi.constituent_donor_id
+--     , mvi.constituent_name
+     , mvi.involvement_code As PEAC_Inv_Code
+     , mvi.involvement_name As PEAC_Inv_Name
+     , mvi.involvement_status As PEAC_Inv_Status
+     , mvi.involvement_type As PEAC_Inv_Type
+     , mvi.involvement_role As PEAC_Inv_Role
+     , mvi.involvement_start_date As PEAC_Inv_Start_Dt
+     , mvi.involvement_comment As PEAC_Inv_Comment
+From mv_involvement mvi
+Where mvi.involvement_name = 'Kellogg Private Equity Advisory Council'
+And mvi.involvement_status = 'Current'
+)
+,
+
+
+Abrams As (
+Select mvi.constituent_donor_id
+--     , mvi.constituent_name
+     , mvi.involvement_code As Abrams_Inv_Code
+     , mvi.involvement_name As Abrams_Inv_Name
+     , mvi.involvement_status As Abrams_Inv_Status
+     , mvi.involvement_type As Abrams_Inv_Type
+     , mvi.involvement_role As Abrams_Inv_Role
+     , mvi.involvement_start_date As Abrams_Inv_Start_Dt
+     , mvi.involvement_comment As Abrams_Inv_Comment
+From mv_involvement mvi
+Where mvi.involvement_name = 'Abrams Climate Academy Advisory Council'
+And mvi.involvement_status = 'Current'
+)
+,
+
+ind As (
+Select mve.donor_id
+--     , mve.full_name
+       , Case When mve.donor_id Not Like ' ' Then 'Individual_Additions'
+              Else '' End as Ind_Adds
+From mv_entity mve
+Where mve.donor_id In ('0000311983', '0000719523', '0000661743', '0000565069')
+)
+,
+
+
+Ev As (
+Select a.NU_DONOR_ID__C as donor_id
+     , listagg(a.CONFERENCE360__ATTENDEE_FULL_NAME__C, ', ') Within Group (Order By a.CONFERENCE360__EVENT_START_DATE__C ASC) as full_name
+     , listagg(a.CONFERENCE360__EVENT_NAME__C, ', ') Within Group (Order By a.CONFERENCE360__EVENT_START_DATE__C ASC)  as event_name
+     , listagg(a.CONFERENCE360__EVENT_START_DATE__C, ', ') Within Group (Order By a.CONFERENCE360__EVENT_START_DATE__C ASC) as start_date
+     , listagg(a.conference360__event_end_date__c, ', ') Within Group (Order By a.CONFERENCE360__EVENT_START_DATE__C ASC) as end_date
+     , listagg(a.conference360__event_organizer_name__c, ', ') Within Group (Order By a.CONFERENCE360__EVENT_START_DATE__C ASC) as organizer_name
+     , listagg(a.conference360__registration_status__c, ', ') Within Group (Order By a.CONFERENCE360__EVENT_START_DATE__C ASC) as registration_status
+     , listagg(a.conference360__attendance_status__c, ', ') Within Group (Order By a.CONFERENCE360__EVENT_START_DATE__C ASC) as attendance_status
+     , listagg(a.conference360__event_id__c, ', ') Within Group (Order By a.CONFERENCE360__EVENT_START_DATE__C ASC) as event_id
+     , listagg(Case When a.CONFERENCE360__EVENT_NAME__C like '%KSM%'
+       or a.CONFERENCE360__EVENT_NAME__C like '%Kellogg%' 
+       or a.conference360__event_organizer_name__c like '%Kellogg%'
+       or a.conference360__event_organizer_name__c like '%KSM%'
+          then 'Y' end, ', ') Within Group (Order By a.CONFERENCE360__EVENT_START_DATE__C ASC) as KSM_Event
+From stg_alumni.conference360__attendee__c a 
+Where a.NU_DONOR_ID__C  is not null
+And a.CONFERENCE360__EVENT_NAME__C is not null
+And a.CONFERENCE360__EVENT_NAME__C In ('NYC Kellogg Campaign Event', 'KSM Kabiller Science of Empathy Salon and Dinner', 'Atlanta Kellogg Campaign Event', 'Austin Kellogg Campaign Event', 'Kellogg Campaign Event - Lesher Dinner in Washington DC', 'Miami Kellogg Campaign Event', 'Kellogg Naples Campaign Event', 'KSM 2026 Cornerstone Salon', '2026 Palm Beach Kellogg Campaign Event', 'The Future of Kellogg: Preparing Leaders in an Era of Disruption', 'Boston Kellogg Campaign Event', 'Kellogg Class of 1991 Pre Warm Up Party NYC', 'Technology in the Future of Finance', 'Kellogg VC Event in Menlo Park', 'KSM Full Circle Afternoon Tea Hong Kong', 'Newport Beach Kellogg Campaign Event', 'KLC Minneapolis Campaign Event', 'The Future of the Kellogg MBA: Preparing Leaders in an Era of Disruption', 'PEVC: Private Markets in a Changing Global Landscape Dinner')
+Group By a.NU_DONOR_ID__C
+)
+,
+
+merge_ids As (
+Select constituent_donor_id
+From Vet
+Union
+Select constituent_donor_id
+From PEAC
+Union
+Select constituent_donor_id
+From Abrams
+Union
+Select donor_id
+From Ind
+Union
+Select donor_id
+From Ev
+)
+
+Select mid.constituent_donor_id
+     , mve.full_name
+     , mve.institutional_suffix
+     , deg.degrees_concat
+     , deg.program
+     , deg.first_ksm_year
+     , deg.first_masters_year
+     , ind.Ind_Adds
+     , vet.Vet_Inv_Code
+     , vet.Vet_Inv_Name
+     , vet.Vet_Inv_Status
+     , vet.Vet_Inv_Type
+     , vet.Vet_Inv_Role
+     , vet.Vet_Inv_Start_Dt
+     , vet.Vet_Inv_Comment
+     , PEAC.PEAC_Inv_Code
+     , PEAC.PEAC_Inv_Name
+     , PEAC.PEAC_Inv_Status
+     , PEAC.PEAC_Inv_Type
+     , PEAC.PEAC_Inv_Role
+     , PEAC.PEAC_Inv_Start_Dt
+     , PEAC.PEAC_Inv_Comment
+     , Abrams.Abrams_Inv_Code
+     , Abrams.Abrams_Inv_Name
+     , Abrams.Abrams_Inv_Status
+     , Abrams.Abrams_Inv_Type
+     , Abrams.Abrams_Inv_Role
+     , Abrams.Abrams_Inv_Start_Dt
+     , Abrams.Abrams_Inv_Comment
+     , Ev.Event_name
+     , Ev.Start_date
+     , Ev.End_date
+     , Ev.Organizer_name
+     , Ev.Registration_status
+     , Ev.Attendance_status
+     , Ev.Event_id
+     , Ev.KSM_Event
+From merge_ids mid
+Inner Join mv_entity mve
+      On mve.donor_id = mid.constituent_donor_id
+Left Join mv_entity_ksm_degrees deg
+      On deg.donor_id = mid.constituent_donor_id
+Left Join Vet
+      On Vet.constituent_donor_id = mid.constituent_donor_id
+Left Join PEAC
+      On PEAC.constituent_donor_id = mid.constituent_donor_id
+Left Join Abrams
+      On Abrams.constituent_donor_id = mid.constituent_donor_id
+Left Join Ind
+      On Ind.donor_id = mid.constituent_donor_id
+Left Join Ev
+      On Ev.donor_id = mid.constituent_donor_id
+;
+
+Select cr.id
+     , cr.name
+     , cr.ucinn_ascendv2__description__c
+     , cr.ap_contact_report_author_constituent__c
+     , cr.ap_contact_report_author_name_formula__c
+     , cr.ap_contact_report_lookup_helper__c
+     , cr.ap_purpose__c
+     , cr.createddate
+     , cr.ucinn_ascendv2__contact_method__c
+     , cr.ucinn_ascendv2__contact_report_body__c
+     , cr.ucinn_ascendv2__contact_report_name_auto_number__c
+     , cr.ucinn_ascendv2__date__c
+From stg_alumni.ucinn_ascendv2__contact_report__c cr
+Where cr.ID In ('a0IUz000008l2hhMAA', 'a0IUz00000AkNThMAN', 'a0IUz00000Amf6LMAR',
+'a0IUz00000AmfntMAB', 'a0IUz00000AmLcHMAV', 'a0IUz00000AmMmrMAF', 'a0IUz00000BXq37MAD')
