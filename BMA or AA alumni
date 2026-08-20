@@ -1,0 +1,61 @@
+With AA As (
+Select ent.donor_id
+     , ent.full_name
+     , ent.ethnicity
+From mv_entity ent
+Where ent.ethnicity = 'Black or African American'
+)
+,
+
+BMA As (
+Select inv.constituent_donor_id
+--     , listagg(inv.constituent_name, ', ') Within Group (Order By inv.involvement_start_date ASC) as 
+     , listagg(inv.involvement_code, ', ') Within Group (Order By inv.involvement_start_date ASC) As Inv_Codes
+     , listagg(inv.involvement_name, ', ') Within Group (Order By inv.involvement_start_date ASC) As Inv_Names
+     , listagg(inv.involvement_status, ', ') Within Group (Order By inv.involvement_start_date ASC) As Inv_Status
+     , listagg(inv.involvement_role, ', ') Within Group (Order By inv.involvement_start_date ASC) As Inv_Roles
+     , listagg(inv.involvement_start_date, ', ') Within Group (Order By inv.involvement_start_date ASC) As Inv_Start_Dates
+From mv_involvement inv
+Where inv.involvement_code In ('COM-KACBL', 'STU-KSA49', 'STU-KSA57')
+Group By inv.constituent_donor_id
+)
+,
+
+merge_ids As (
+Select donor_id
+From AA
+Union
+Select constituent_donor_id
+From BMA
+)
+
+Select mid.donor_id
+     , mve.full_name
+     , deg.degrees_concat
+     , deg.program
+     , deg.first_ksm_year
+     , deg.first_masters_year
+     , mve.ethnicity
+     , bma.Inv_Codes
+     , bma.Inv_Names
+     , bma.Inv_Status
+     , bma.Inv_Roles
+     , bma.Inv_Start_Dates
+     , con.email_preferred_type
+     , con.email_preferred
+     , shc.no_email_ind
+     , shc.no_contact
+From merge_ids mid
+Inner Join mv_entity mve
+      On mve.donor_id = mid.donor_id
+Inner Join mv_entity_ksm_degrees deg
+      On deg.donor_id = mve.donor_id
+Left Join BMA
+      On bma.constituent_donor_id = mve.donor_id
+Left Join mv_entity_contact_info con
+      On con.donor_id = mve.donor_id
+Left Join mv_special_handling shc
+     On shc.donor_id = mve.donor_id
+Where (deg.program Not Like 'STUDENT'
+And deg.program Not Like '%UNK%'
+And deg.program Not Like '%NONGRAD%')
