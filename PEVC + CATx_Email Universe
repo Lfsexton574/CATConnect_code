@@ -1,0 +1,123 @@
+With pe_inv As (
+Select inv.constituent_donor_id
+--     , Listagg (inv.constituent_name, ';  ') Within Group (Order By inv.involvement_start_date) As Inv_Name
+     , Listagg (inv.involvement_name, ';  ') Within Group (Order By inv.involvement_start_date) As Inv_Name
+     , Listagg (inv.involvement_status, ';  ') Within Group (Order By inv.involvement_start_date) As Inv_Status
+     , Listagg (inv.involvement_type, ';  ') Within Group (Order By inv.involvement_start_date) As Inv_Type
+     , Listagg (inv.involvement_role, ';  ') Within Group (Order By inv.involvement_start_date) As Inv_Role
+     , Listagg (inv.involvement_comment, ';  ') Within Group (Order By inv.involvement_start_date) As Inv_Comment
+     , Listagg (inv.involvement_start_date, ';  ') Within Group (Order By inv.involvement_start_date) As Inv_Start_Dt
+From mv_involvement inv
+Where inv.involvement_name In ('KSM Private Equity Club', 'Kellogg Private Equity Advisory Council',
+'Kellogg Alumni in Private Equity', 'KSM Asia Private Equity Advisory Council',
+'Private Equity and Venture Capital Club')
+Group By inv.constituent_donor_id
+)
+,
+
+pe_prim_emp As (
+Select distinct
+       c.UCINN_ASCENDV2__RELATED_CONTACT_DONOR_ID_FORMULA__C As Donor_ID
+     , max (c.ap_is_primary_employment__c) keep (dense_rank First Order by c.ucinn_ascendv2__start_date__c desc) as PE_primary_employ_ind
+     , max (c.ucinn_ascendv2__status__c) keep (dense_rank First Order by c.ucinn_ascendv2__start_date__c desc) as PE_primary_employ_status
+     , max (c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C) keep (dense_rank first order by c.ucinn_ascendv2__start_date__c desc) as PE_primary_employer
+     , max (c.ucinn_ascendv2__job_title__c) keep (dense_rank first order by c.ucinn_ascendv2__start_date__c desc) as PE_primary_job_title
+From stg_alumni.ucinn_ascendv2__Affiliation__c c
+Where c.ap_is_primary_employment__c = 'true'
+And c.ucinn_ascendv2__status__c = 'Current'
+And (c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Private Equity%'
+OR c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Finance%'
+OR c.UCINN_ASCENDV2__RELATED_ACCOUNT_NAME_FORMULA__C Like '%Venture Capital%'
+)
+Group by c.UCINN_ASCENDV2__RELATED_CONTACT_DONOR_ID_FORMULA__C
+)
+,
+
+pe_ind As (
+Select dm.constituent_donor_id
+     , dm.industries
+     , dm.industry_subsectors
+From DM_ALUMNI.Dim_Constituent dm
+Where (dm.industries Like 'Finance and Insurance'
+OR dm.industry_subsectors In ('Other Financial Investment Activities',
+'Funds, Trusts, and Other Financial Vehicles',
+'International Trade Financing',
+'Investment Banking and Securities Dealing',
+'International Trade Financing',
+'Securities, Commodity Contracts, and Other Financial Investments and Related Activities',
+'Venture Capital and Private Equity Principals'
+)
+)
+)
+,
+
+CATx_Int As (
+Select id_number
+     , PEVC_INTEREST As CATx_Interest
+From CATx_PEVC
+)
+,
+
+merge_ids As (
+Select constituent_donor_id
+From pe_inv
+Union
+Select donor_id
+From pe_prim_emp
+Union
+Select constituent_donor_id
+From pe_ind
+Union
+Select id_number
+From CATx_Int
+)
+
+Select Distinct mid.constituent_donor_id
+     , mve.full_name
+     , deg.degrees_concat
+     , deg.program
+     , deg.first_ksm_year
+     , deg.first_masters_year
+     , pe_ind.industries
+     , pe_ind.industry_subsectors
+     , CATx_Int.CATx_Interest
+     , mee."EMPLOYER_NAME"
+     , mee."JOB_TITLE"
+     , mee."PRIMARY_EMPLOYMENT_INDICATOR"
+     , pe_inv.Inv_Name
+     , pe_inv.Inv_Status
+     , pe_inv.Inv_Type
+     , pe_inv.Inv_Role
+     , pe_inv.Inv_Comment
+     , pe_inv.Inv_Start_Dt
+     , pepe.PE_primary_employ_ind
+     , pepe.PE_primary_employ_status
+     , pepe.PE_primary_employer
+     , pepe.PE_primary_job_title
+     , con.email_preferred
+     , shc.no_contact
+     , shc.no_email_ind
+     , shc.service_indicators_concat
+From merge_ids mid
+Inner Join mv_entity mve
+      On mid.constituent_donor_id = mve.donor_id
+Inner Join mv_entity_ksm_degrees deg
+      On mid.constituent_donor_id = deg.donor_id
+Left Join v_entity_employment_primary mee
+      On mid.constituent_donor_id = mee.donor_id
+Left Join pe_inv
+      On mid.constituent_donor_id = pe_inv.constituent_donor_id
+Left Join pe_prim_emp pepe
+      On mid.constituent_donor_id = pepe.donor_id
+Left Join pe_ind
+      On mid.constituent_donor_id = pe_ind.constituent_donor_id
+Left Join CATx_Int
+      On mid.constituent_donor_id = CATx_Int.id_number
+Left Join mv_entity_contact_info con
+      On mid.constituent_donor_id = con.donor_id
+Left Join mv_special_handling shc
+      On mid.constituent_donor_id = shc.donor_id
+Where not deg.program like '%NONGRAD%'
+And not deg.program like '%UNK%'
+And not deg.program like '%EXECED%'
+And not deg.program like '%CERT%'
