@@ -1,0 +1,57 @@
+With BoT As (
+Select mvi.constituent_donor_id
+     , mvi.constituent_name
+     , mvi.involvement_name As BOT
+     , mvi.involvement_status As BOT_Status
+     , mvi.involvement_type As BOT_Inv_Type
+     , mvi.involvement_role As BOT_Role
+     , mvi.involvement_start_date As BOT_Start_Date
+     , mvi.involvement_comment As BOT_Comment
+From mv_involvement mvi
+Where mvi.involvement_name = 'Board of Trustees'
+And mvi.involvement_status = 'Current'
+)
+
+
+Select distinct mve.donor_id
+     , mve.ses_id
+     , ec.sort_name
+     , mve.full_name
+     , mve.first_name
+     , mve.last_name
+     , sal.dean_salut
+     , mve.institutional_suffix as Rel_Inst_Suffix
+     , deg.degrees_concat As Rel_Degrees
+     , deg.program As Rel_Program
+     , deg.first_ksm_year As Rel_First_KSM_Year
+     , deg.first_masters_year As Rel_First_Masters_Year
+     , BOT.BOT
+     , BOT.BOT_Status
+     , BOT.BOT_Inv_Type
+     , BOT.BOT_Role
+     , BOT.BOT_Start_Date
+     , BOT.BOT_Comment
+     , ec.address_preferred_type As Rel_Pref_Addr_Type
+     , ec.preferred_address_line_1 As Rel_Pref_Addr_Line1
+     , ec.preferred_address_line_2 As Rel_Pref_Addr_Line2
+     , ec.preferred_address_city As Rel_Pref_Addr_City
+     , ec.preferred_address_state As Rel_Pref_Addr_St
+     , ec.preferred_address_postal_code As Rel_Pref_Addr_ZIP
+     , ec.preferred_address_country As Rel_Pref_Addr_Country
+     , shc.no_mail_ind As Rel_No_Mail_Ind
+     , shc.no_contact As Rel_No_Contact_Ind
+     , shc.service_indicators_concat As Rel_SHC_Contact
+From mv_entity mve
+Left Join mv_entity_ksm_degrees deg
+      On deg.donor_id = mve.donor_id
+Left Join mv_entity_contact_info ec
+      On ec.donor_id = mve.donor_id
+Left Join v_entity_salutations_individual Sal
+      On sal.donor_id = mve.donor_id
+Left Join BOT
+      On bot.constituent_donor_id = mve.donor_id
+Left Join mv_special_handling shc
+      On shc.donor_id = mve.donor_id
+Where mve.donor_id In ('0000453569', '0000309746', '0000698766', '0000286815', '0000298255', '0000755198', '0000773399', '0000636474', '0000382678', '0000698308', '0000028076', '0000410905', '0000744219', '0000719988', '0000362638', '0000287107', '0000297282', '0000402492', '0000796652', '0000096563', '0000353549', '0000849383', '0000333085', '0000401425', '0000796720', '0000078174', '0000500656', '0000394847', '0000610008', '0000758714', '0000387419', '0000699617', '0000656197', '0000133940', '0000412019', '0000326387', '0002766524', '0000764937', '0000584079', '0000733686', '0000375758', '0000298306', '0000566892', '0000744428', '0002764082', '0002781623', '0000854241', '0000849920', '0000316611', '0000384431', '0000834110', '0000600393', '0000639847', '0000922232', '0000384306', '0000046634', '0000088633', '0000355632', '0000054477', '0000883667', '0000884666', '0000724590', '0000373612', '0000282309', '0000828696', '0000899633', '0000654960', '0000031356', '0000302901', '0000391518', '0000293673', '0000599069', '0000614920', '0000879142', '0000321122', '0000489215', '0000359839', '0000488374', '0000863124', '0004050870', '0000583782', '0000384308', '0000382053', '0000780409', '0000072775', '0000567008', '0000635521', '0000060050', '0000330532', '0000393472', '0000854900', '0000402406', '0000790272', '0000431047', '0000752446', '0000343383', '0000083163', '0000341852', '0000849518', '0000927732', '0000330928', '0000866268', '0000665564', '0000567431', '0000608847', '0000667316', '0000822313', '0000283856', '0000900787', '0000905226', '0000382681', '0000479827', '0000344556', '0000357724', '0000320573', '0000600094', '0002763586', '0000433433', '0000316662', '0000468978', '0000469065', '0000548193', '0000307669', '0000927702', '0000852350', '0000439214', '0000350532', '0000369837', '0000369841', '0000283909', '0000281860', '0000856610', '0000921061', '0000405522', '0000928457', '0000608785', '0000282661', '0000284157', '0000668301', '0000643098', '0000762756', '0000811863', '0000656520', '0000820647', '0000484235', '0000548639', '0000292791', '0000322164', '0000856575', '0000282642', '0000432805', '0000309198', '0000722775', '0000298292', '0000441369', '0000362885', '0000495839', '0000840798', '0000364669', '0000837589', '0000924780', '0000154155', '0000846970', '0000847033', '0000648442', '0000292139', '0000927311', '0000289804', '0000336562', '0000378688', '0000289282', '0000501218', '0000403205', '0000694259', '0000389499', '0000533041', '0000562912', '0000321387', '0000854469', '0000484739', '0000822319', '0000924042', '0000409693', '0000355549', '0000371124', '0000838323', '0000873019', '0000884492', '0000333434', '0000334570', '0000666824', '0000847090', '0000834439', '0000356888', '0000905199', '0000705841', '0000293185', '0000294323', '0000406789', '0000367696', '0000422767', '0000347281', '0000667217', '0000439379', '0000059411', '0000335719', '0000380984', '0000758431', '0000018791', '0000366282', '0000441088', '0000668222', '0000522977')
+And (deg.program <> ' '
+Or bot.BOT_Inv_Type <> ' ')
