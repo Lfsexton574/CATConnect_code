@@ -1,0 +1,71 @@
+With c As (
+Select c.ucinn_ascendv2__contact__c
+     , listagg(c.ap_degree_type_from_degreecode__c, ', ') Within Group (Order By c.ap_start_date__c ASC) As Deg_Type
+     , listagg(c.ap_start_date__c, ', ') Within Group (Order By c.ap_start_date__c ASC) As Deg_Start_Date
+     , listagg(c.ap_status__c, ', ') Within Group (Order By c.ap_start_date__c ASC) As Deg_Status
+     , listagg(c.ap_school_name_formula__c, ', ') Within Group (Order By c.ap_start_date__c ASC) As Deg_Name
+     , listagg(c.ap_campus__c, ', ') Within Group (Order By c.ap_start_date__c ASC) As Deg_Campus
+From stg_alumni.ucinn_ascendv2__degree_information__c c
+Where (c.ap_status__c In ('Active', 'Deposited', 'Inactive')
+Or (c.ap_status__c = 'Discontinued'
+And AP_SCHOOL_NAME_FORMULA__C = 'Kellogg'))
+Group By c.ucinn_ascendv2__contact__c
+)
+
+
+Select distinct mve.donor_id
+     , mve.ses_id
+     , ec.sort_name
+     , mve.full_name
+     , mve.first_name
+     , mve.last_name
+     , sal.dean_salut
+     , mve.institutional_suffix
+     , deg.degrees_concat
+     , deg.program
+     , deg.first_ksm_year
+     , deg.majors_concat
+     --expected degree_year
+--     , c.id
+--     , c.name
+--     , c.UCINN_ASCENDV2__CONTACT__C
+--     , c.ucinn_ascendv2__degree_code__c
+--     , c.ucinn_ascendv2__degree_institution__c
+--     , c.ucinn_ascendv2__degree_name_auto_number__c
+--     , c.ap_academic_group__c
+--     , c.ap_degree_type_from_degreecode__c
+--     , c.ap_department__c
+--     , c.ap_school__c
+     , c.Deg_Type
+     , c.Deg_Start_Date
+     , c.Deg_Status
+     , c.Deg_Name
+     , c.Deg_Campus
+--     , con.accountid
+--     , con.ucinn_ascendv2__donor_id__c
+--     , con.ap_institutional_suffix__c
+--     , con.ap_name_formula__c
+--     , con.ap_search_formula__c
+--     , con.firstname
+--     , con.id
+--     , con.name
+     , con.ucinn_ascendv2__contact_type__c
+     , ec.address_preferred_type
+     , ec.preferred_address_line_1
+     , ec.preferred_address_line_2
+     , ec.preferred_address_city
+     , ec.preferred_address_state
+     , ec.preferred_address_postal_code
+     , ec.preferred_address_country
+From mv_entity mve
+Left Join c
+     On c.ucinn_ascendv2__contact__c = mve.salesforce_id
+Inner Join stg_alumni.contact con
+      On c.ucinn_ascendv2__contact__c = con.id
+Left Join mv_entity_ksm_degrees deg
+      On deg.donor_id = mve.donor_id
+Left Join mv_entity_contact_info ec
+      On ec.donor_id = mve.donor_id
+Left Join v_entity_salutations_individual Sal
+      On sal.donor_id = mve.donor_id
+Where mve.donor_id In ('0000687684', '0000699898', '0000752462', '0000773643', '0000779699', '0000780174', '0000789762', '0000789979', '0000790001', '0000790584', '0000800217', '0000800296', '0000806111', '0000806423', '0000806485', '0000833386', '0000849605', '0002793801', '0003927771', '0003936556', '0003937665', '0003938319', '0003940425', '0003955801', '0003958751', '0003962008', '0003962078', '0003963145', '0003963943', '0003969219', '0003975622', '0003975624', '0003976563', '0003976571', '0003979110', '0003981479', '0003981481', '0003981752', '0003981756', '0003981760', '0003983137', '0004013985', '0004014864', '0004015014', '0004025666', '0004026782', '0004027199', '0004027441', '0004027773', '0004027953', '0004028791', '0004032239', '0004033435', '0004034003', '0004034668', '0004034896', '0004034962', '0004035242', '0004038877', '0004043041', '0004043047', '0004043051', '0004043055', '0004043059', '0004043101', '0004043195', '0004043203', '0004051634', '0004052131', '0004052149', '0004054266', '0004055131', '0004055137', '0004055697', '0004057148', '0004057581', '0004057756', '0004059249', '0004060220', '0004060226', '0004060548', '0004061776', '0000569128', '0000780012', '0000806344', '0000863967', '0000871582', '0002765108', '0003940445', '0003941700', '0003952333', '0003955793', '0003965986', '0003973333', '0003975664', '0003975668', '0003976567', '0003976995', '0003981435', '0003981441', '0003981523', '0003981684', '0003981780', '0003983069', '0003983109', '0003983125', '0003983131', '0003991902', '0003996284', '0004008026', '0004009783', '0004014834', '0004025704', '0004025830', '0004026744', '0004027251', '0004027559', '0004028913', '0004029324', '0004033431', '0004034001', '0004034205', '0004034209', '0004034576', '0004034676', '0004034894', '0004034930', '0004035226', '0004035230', '0004035276', '0004043037', '0004043199', '0004043229', '0004044601', '0004054032', '0004054074', '0004054230', '0004057840', '0004058344', '0004058364', '0004059462', '0004059758', '0004060115', '0004060270', '0004060818', '0004060830', '0004061057', '0004063167', '0000790132', '0000800100', '0004055689')
