@@ -1,0 +1,78 @@
+With Pref_Email As (
+Select stg.ucinn_ascendv2__donor_id__c As PA_donor_id
+--    , stge.ucinn_ascendv2__contact__c
+--    , stg.name
+    , stge.ucinn_ascendv2__is_preferred__c As PA_Email_Ind
+    , stge.ucinn_ascendv2__status__c As PA_Email_Status
+    , stge.ucinn_ascendv2__start_date__c As PA_Email_Start
+    , stge.ucinn_ascendv2__end_date__c As PA_Email_End
+    , stge.ucinn_ascendv2__email_address__c As PA_Email
+From stg_alumni.ucinn_ascendv2__email__c stge
+Inner Join stg_alumni.contact stg
+      On stge.ucinn_ascendv2__contact__c = stg.ID
+Where stge.ucinn_ascendv2__is_preferred__c = 'true'
+And stge.ucinn_ascendv2__status__c = 'Current'
+)
+,
+
+NoPrefAct_Email As (
+Select stg.ucinn_ascendv2__donor_id__c As AnP_donor_id
+--    , stge.ucinn_ascendv2__contact__c
+--    , stg.name
+    , listagg(stge.ucinn_ascendv2__is_preferred__c, ', ') Within Group (Order By stge.ucinn_ascendv2__email_address__c ASC) As AnP_Pref
+    , listagg(stge.ucinn_ascendv2__status__c, ', ') Within Group (Order By stge.ucinn_ascendv2__email_address__c ASC) As AnP_Status
+    , listagg(stge.ucinn_ascendv2__start_date__c, ', ') Within Group (Order By stge.ucinn_ascendv2__email_address__c ASC) As AnP_Start
+    , listagg(stge.ucinn_ascendv2__end_date__c, ', ') Within Group (Order By stge.ucinn_ascendv2__email_address__c ASC) As AnP_End
+    , listagg(stge.ucinn_ascendv2__email_address__c, ', ') Within Group (Order By stge.ucinn_ascendv2__email_address__c ASC) As AnP_Email
+From stg_alumni.ucinn_ascendv2__email__c stge
+Inner Join stg_alumni.contact stg
+      On stge.ucinn_ascendv2__contact__c = stg.ID
+Where stge.ucinn_ascendv2__is_preferred__c = 'false'
+And stge.ucinn_ascendv2__status__c = 'Current'
+Group By stg.ucinn_ascendv2__donor_id__c
+)
+,
+
+InAct_Email As (
+Select stg.ucinn_ascendv2__donor_id__c As NA_donor_id
+--    , stge.ucinn_ascendv2__contact__c
+--    , stg.name
+    , listagg(stge.ucinn_ascendv2__is_preferred__c, ', ') Within Group (Order By stge.ucinn_ascendv2__email_address__c ASC) As NA_Pref
+    , listagg(stge.ucinn_ascendv2__status__c, ', ') Within Group (Order By stge.ucinn_ascendv2__email_address__c ASC) As NA_Status
+    , listagg(stge.ucinn_ascendv2__start_date__c, ', ') Within Group (Order By stge.ucinn_ascendv2__email_address__c ASC) As NA_Start
+    , listagg(stge.ucinn_ascendv2__end_date__c, ', ') Within Group (Order By stge.ucinn_ascendv2__email_address__c ASC) As NA_End
+    , listagg(stge.ucinn_ascendv2__email_address__c, ', ') Within Group (Order By stge.ucinn_ascendv2__email_address__c ASC) As NA_Email
+From stg_alumni.ucinn_ascendv2__email__c stge
+Inner Join stg_alumni.contact stg
+      On stge.ucinn_ascendv2__contact__c = stg.ID
+Where stge.ucinn_ascendv2__status__c = 'Former'
+Group By stg.ucinn_ascendv2__donor_id__c
+)
+
+Select reg.donor_id
+     , deg.full_name
+     , deg.degrees_concat
+     , pe.PA_Email_Ind
+     , pe.PA_Email_Status
+     , pe.PA_Email_Start
+     , pe.PA_Email_End
+     , pe.PA_Email
+     , npe.AnP_Pref
+     , npe.AnP_Status
+     , npe.AnP_Start
+     , npe.AnP_End
+     , npe.AnP_Email
+     , iae.NA_Pref
+     , iae.NA_Status
+     , iae.NA_Start
+     , iae.NA_End
+     , iae.NA_Email
+From Cvent_90day_Reg_Feb2026 reg -- update temp table
+Left Join mv_entity_ksm_degrees deg
+      On reg.donor_id = deg.donor_id
+Left Join Pref_Email pe
+     On pe.PA_donor_id = deg.donor_id
+Left Join NoPrefAct_Email npe
+     On npe.AnP_donor_id = deg.donor_id
+Left Join InAct_Email iae
+     On iae.NA_donor_id = deg.donor_id
