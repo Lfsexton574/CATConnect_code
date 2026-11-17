@@ -1,0 +1,109 @@
+With vet As (
+Select mve.donor_id
+     , mve.veteran_indicator
+From mv_entity mve
+Where mve.veteran_indicator = 'Y'
+)
+,
+
+council As (
+Select mvi.constituent_donor_id
+     , mvi.involvement_name as KSM_Vet_Council
+     , mvi.involvement_role as KSM_Vet_Council_Role
+From mv_involvement mvi
+Where mvi.involvement_code = 'COM-KVC'
+)
+,
+
+assn As (
+Select mvi.constituent_donor_id
+     , mvi.involvement_name as KSM_Vet_Assn
+     , mvi.involvement_role as KSM_Vet_Assn_Role
+From mv_involvement mvi
+Where mvi.involvement_code = 'STU-KVA'
+)
+,
+
+mil_emp As (
+Select em.donor_id
+     , listagg(em.primary_employment_indicator, ', ') Within Group (Order By em.employment_start_date ASC) as Primary_Mil_Emp_Ind
+     , listagg(em.employer_name, ', ') Within Group (Order By em.employment_start_date ASC) as Primary_Mil_Emp
+     , listagg(em.job_title, ', ') Within Group (Order By em.employment_start_date ASC) as Primary_Mil_Job
+     , listagg(em.employment_status, ', ') Within Group (Order By em.employment_start_date ASC) as Primary_Mil_Status
+From mv_entity_employment em
+Where (em.employer_name Like '%United States Armed Forces%'
+Or em.employer_name Like '%United States Air Force%'
+Or em.employer_name Like '%US Air Force%'
+Or em.employer_name Like '%United States Navy%'
+Or em.employer_name Like '%US Navy%'
+Or em.employer_name Like '%United States Marine Corps%'
+Or em.employer_name Like '%U.S. Army%'
+Or em.employer_name Like '%United States Army%'
+Or em.employer_name Like '%US Army%')
+Group By em.donor_id
+)
+,
+
+merge_ids As (
+Select donor_id
+From vet
+Union
+Select constituent_donor_id
+From council
+Union
+Select constituent_donor_id
+From assn
+Union
+Select donor_id
+From mil_emp
+)
+,
+
+prim_emp As (
+Select e.donor_id
+     , e.primary_employment_indicator as Primary_Emp_Ind
+     , e.employment_status as Primary_Emp_Status
+     , e.employer_name as Primary_Emp
+     , e.job_title as Primary_Job
+From mv_entity_employment e
+Where e.primary_employment_indicator = 'Y'
+)
+
+Select Distinct mid.donor_id
+     , mv.full_name
+     , mv.first_name
+     , mv.last_name
+     , mv.institutional_suffix
+     , mv.veteran_indicator
+     , deg.degrees_concat
+     , deg.program
+     , deg.program_group
+     , deg.first_ksm_year
+     , deg.first_masters_year
+     , pe.Primary_Emp_Ind
+     , pe.Primary_Emp_Status
+     , pe.Primary_Emp
+     , pe.Primary_Job
+     , mle.Primary_Mil_Emp_Ind
+     , mle.Primary_Mil_Emp
+     , mle.Primary_Mil_Job
+     , mle.Primary_Mil_Status
+     , c.KSM_Vet_Council
+     , c.KSM_Vet_Council_Role
+     , a.KSM_Vet_Assn
+     , a.KSM_Vet_Assn_Role
+From merge_ids mid
+Inner Join mv_entity mv
+     On mv.donor_id = mid.donor_id
+Inner Join mv_entity_ksm_degrees deg
+     On deg.donor_id = mid.donor_id
+Left Join mil_emp mle
+     On mle.donor_id = mid.donor_id
+Left Join vet
+     On vet.donor_id = mid.donor_id
+Left Join council c
+     On c.constituent_donor_id = mid.donor_id
+Left Join assn a
+     On a.constituent_donor_id = mid.donor_id
+Left Join prim_emp pe
+     On pe.donor_id = mid.donor_id
