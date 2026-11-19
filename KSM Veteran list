@@ -65,6 +65,46 @@ Select e.donor_id
      , e.employment_status as Primary_Emp_Status
      , e.employer_name as Primary_Emp
      , e.job_title as Primary_Job
+     , Case When (e.job_title like '%Vice President%'
+                 Or e.job_title like '%VP%'
+                 Or e.job_title like 'Owner%'
+                 Or e.job_title like '%Founder%'
+                 Or e.job_title like '%Managing Director%'
+                 Or e.job_title like '%Executive%'
+                 Or e.job_title like '%Partner%'
+                 Or e.job_title like '%President%'
+                 Or e.job_title like '%Principal%'
+                 Or e.job_title like '%Head%'
+                 Or e.job_title like '%Chief%'
+                 Or e.job_title like '%Board%'
+                 ---- Check Abbreviations too 
+                 Or e.job_title like '%CEO%'
+                 --- Chief Finance Officer
+                 Or e.job_title like '%CFO%'
+                 --- Chief Marketing Officer
+                 Or e.job_title like '%CMO%'
+                 --- Chief Information Officer
+                 Or e.job_title like '%CIO%'
+                 --- Chief Operating Office
+                 Or e.job_title like '%COO%'
+                 --- Chief Tech Officer
+                 Or e.job_title like '%CTO%'
+                 --- Chief Data Officer
+                 Or e.job_title like '%CDO%'
+                 --- Chief HR Officer
+                 Or e.job_title like '%CHRO%'
+                 --- Chief Compliance officer
+                 Or e.job_title like '%CCO%')
+                 
+                 --- take out assistants/associates/advisors, not actual senior titles
+                 and (e.job_title not like '%Assistant%'
+                 and e.job_title not like '%Asst%'
+                 and e.job_title not like '%Associate%'
+                 and e.job_title not like '%Assoc%'
+                 and e.job_title not like '%Advisor%'
+                 and e.job_title not like '%Chief of Staff%'
+                 and e.job_title not like '%Workspace Product Partnerships%') Then 'Senior Leadership Role'
+                     Else '' End as Senior_Leadership_Ind
 From mv_entity_employment e
 Where e.primary_employment_indicator = 'Y'
 )
@@ -84,6 +124,7 @@ Select Distinct mid.donor_id
      , pe.Primary_Emp_Status
      , pe.Primary_Emp
      , pe.Primary_Job
+     , pe.Senior_Leadership_Ind
      , mle.Primary_Mil_Emp_Ind
      , mle.Primary_Mil_Emp
      , mle.Primary_Mil_Job
